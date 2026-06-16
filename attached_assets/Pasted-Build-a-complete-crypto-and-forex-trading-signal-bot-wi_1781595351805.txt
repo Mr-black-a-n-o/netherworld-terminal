@@ -1,0 +1,213 @@
+Build a complete crypto and forex trading signal bot with Telegram integration and web dashboard. Use Python backend with Flask, Binance API for crypto data and Yahoo Finance for forex data.
+
+═══════════════════════════════
+1. CORE SIGNAL BOT
+═══════════════════════════════
+- Analyze assets using these 5 conditions:
+  * EMA200 trend confirmation
+  * RSI divergence check
+  * Volume spike detection
+  * Support/Resistance zone strength
+  * Momentum confirmation
+- Generate signal for ANY coin/timeframe requested regardless of conditions
+- Show strength indicator:
+  * 1/5 = 🔴 VERY WEAK
+  * 2/5 = 🟠 WEAK
+  * 3/5 = 🟡 MODERATE
+  * 4/5 = 🟢 STRONG
+  * 5/5 = ⚡ ELITE
+- Show which conditions passed and failed in signal
+- Always show BUY or SELL with entry price, SL, TP
+- Auto scheduler runs every 15 minutes analyzing all active assets
+- Pre-loaded assets: BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT (crypto) + EURUSD, GBPUSD, USDJPY (forex)
+
+═══════════════════════════════
+2. TELEGRAM BOT
+═══════════════════════════════
+- Bot name: ham_evil_bot
+- When user sends "BTCUSDT 1h" or "ETHUSDT 4h" → immediately analyze and send signal
+- Supported timeframes: 1m 5m 15m 30m 1h 4h 12h 1d
+- Every signal shows: entry time, entry price, SL, TP, strength level, conditions passed/failed
+- When TP or SL hit → send Telegram alert with exit time, exit price, profit/loss result
+- ONE TRADE LOCK PER COIN: each coin can have only one active trade at a time
+- Multiple different coins can run simultaneously
+- If user requests signal for coin that already has active trade, reply exactly:
+  "තාම trade එක ඉවරනෑ cuduuu😘. චුච්චක් ඉන්නො😋"
+- Trade close detection: check every 15 minutes if active trade hit TP or SL
+- When closed: send Telegram alert with result and unlock coin for next signal
+
+TELEGRAM COMMANDS (admin only):
+- /profit → show ALL active trades with current P/L:
+  🔥 ACTIVE TRADES PROFIT/LOSS
+  ━━━━━━━━━━━━━━━
+  📈 BTCUSDT - BUY
+  Entry: 67,000
+  Current: 68,500
+  Profit: +2.23% | +$150
+  ━━━━━━━━━━━━━━━
+  💰 TOTAL: +$200 | +1.89%
+
+- /die BTCUSDT → force close that coin trade:
+  💀 TRADE FORCE CLOSED
+  ━━━━━━━━━━━━━━━
+  🪙 BTCUSDT - BUY
+  Entry: 67,000
+  Exit: 68,200 (Manual Close)
+  Result: +1.79% | +$120
+  Time Active: 2h 30m
+  ━━━━━━━━━━━━━━━
+  Trade unlocked ✅
+
+- /stats → today scorecard:
+  * Total signals fired
+  * TP hits (wins)
+  * SL hits (losses)
+  * Manual closes
+  * Win rate %
+  * Best and worst trade of the day
+
+- /p → shorthand for /profit
+- /portfolio → active trades with entry, TP, SL
+
+═══════════════════════════════
+3. WEB DASHBOARD DESIGN
+═══════════════════════════════
+- App name: ham_evil_bot
+- Full dark aura theme: deep purple, dark red, black background
+- Glowing borders, dramatic fonts, mysterious powerful trading terminal look
+- Share Tech Mono font from Google Fonts throughout
+- Dashboard title: NETHERWORLD TERMINAL ⚡ (single ⚡ on right only)
+- Subtitle: SIGNAL INTELLIGENCE ACTIVE — HAM_EVIL_BOT
+- Animated flowing red/purple gradient line across top
+- Stat cards pulse between dark-red and purple shadow every 4 seconds
+- Corner bracket accents (red) on chart and signal panels
+- "🔴 HUNTING SIGNALS..." blinking red dot status
+- BUY signals: 🔥 flame prefix
+- SELL signals: ☠️ skull prefix
+- STRONG signals: ⚡ ELITE SIGNAL glowing badge
+- "🎯 TARGET LOCKED" blinking red header above signals list
+- "Mr.black_a_n_o" semi-transparent watermark fixed bottom-right every page
+- Footer every page: "☠️ Powered by Mr.black_a_n_o — ham_evil_bot netherworld edition ☠️"
+- Sidebar bottom: "☠️ Powered by Mr.black_a_n_o"
+
+SIDEBAR ORDER:
+Dashboard → Signals → Assets → Performance → Settings → ─────── → 👤 Profile
+
+═══════════════════════════════
+4. INTRO SCREEN
+═══════════════════════════════
+- Full black screen with galaxy animation:
+  * Flying stars and particles in purple/dark red colors
+  * Nebula glow effect in background
+  * "POWERED BY MR.BLACK_A_N_O" text floating in center with neon pink glow
+  * Pulsing rings around text
+  * Skull emoji ☠️ above text
+  * Bottom credit: "☠️ ham_evil_bot — netherworld edition ☠️"
+- When user clicks or taps ANYWHERE on screen:
+  * Trigger galaxy burst/explosion animation at click point
+  * Play dramatic cinematic sound (thunder/whoosh/dark boom)
+  * Then play deep female voice "Welcome to Hamdhan's Netherworld"
+  * Start 9 second countdown with progress bar
+  * Fade smoothly into dashboard after 9 seconds
+- No skip button - must watch full intro
+- Works on ALL browsers and ALL devices
+
+═══════════════════════════════
+5. LOGIN SYSTEM
+═══════════════════════════════
+- Show login page before dashboard with 2 tabs: ADMIN and USER
+
+ADMIN login:
+- Username: hamdhan
+- Password: hamdhan246
+- Full access - view and edit everything
+
+USER login:
+- Must enter username (any language)
+- Username validation:
+  * Letters only (English, Sinhala, Tamil etc)
+  * Block numbers, symbols, spaces
+  * Minimum 3 characters
+  * Show error if invalid
+- Passkey auto-generated based on device fingerprint
+- Same passkey will NOT work on another device
+- Users can VIEW all pages but CANNOT edit anything
+- All edit, save, add, delete buttons hidden for users
+
+═══════════════════════════════
+6. USER MANAGEMENT SYSTEM
+═══════════════════════════════
+- Admin dashboard "User Management" section shows all users:
+  * Username
+  * Device info
+  * Status: 🟢 ACTIVE or 🔴 BLOCKED
+  * [Block] / [Unblock] button per user
+  * [Remove] button per user
+- "🚫 Block All Users" button
+- When blocked user tries to login → TERROR SCREEN:
+  * Full black screen
+  * Red glitching text effect
+  * Skull rain animation (skulls falling) ☠️
+  * Blood drip effect on sides
+  * Red lightning flashing background
+  * Screen shake animation
+  * Horror sound effect plays
+  * "ACCESS DENIED" red glowing text flashing
+  * Then exact message:
+    "Lol blocked. 😂
+    There is no place for you in hell,
+    Start paving your way to heaven 🙏
+    You've been blocked by Mr.black_a_n_o ☠️"
+
+═══════════════════════════════
+7. PROFILE SYSTEM
+═══════════════════════════════
+ADMIN profile (editable):
+- Profile photo (uploadable)
+- Creator: [admin enters name] ← label "Creator" not "Name"
+- Bio/Tagline
+- Contact info
+- Social links
+- Role badge: ADMIN
+- All saves instantly
+
+USER view (read only):
+- Can only VIEW admin profile
+- No edit option
+- No own profile
+- Role badge: USER
+
+═══════════════════════════════
+8. RESPONSIVE DESIGN
+═══════════════════════════════
+- PC/Laptop: full wide dashboard with sidebar
+- Mobile: sidebar converts to bottom navigation bar with icons
+- All cards, charts, panels resize for all screen sizes
+- Touch friendly buttons
+
+═══════════════════════════════
+9. PWA - INSTALL AS APP
+═══════════════════════════════
+- Make installable as PWA
+- manifest.json:
+  * App name: "ham_evil_bot"
+  * Short name: "ham_evil_bot"
+  * Theme color: dark purple/black
+  * Background: black
+  * Display: standalone fullscreen
+- Admin can upload custom icon from Profile/Settings
+- Uploaded icon automatically becomes:
+  * Browser tab favicon
+  * PWA install icon
+  * Dashboard title side icon
+- Default: dark skull icon
+- Service worker for offline support
+- "Install App" button in dashboard header
+- Works on Android, iPhone, PC/Mac
+
+═══════════════════════════════
+10. ENVIRONMENT SECRETS NEEDED
+═══════════════════════════════
+- TELEGRAM_BOT_TOKEN: add as Replit secret
+- No Binance API key needed (public data only)
+- No paid APIs needed - all free
