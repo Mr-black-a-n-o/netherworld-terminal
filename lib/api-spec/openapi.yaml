@@ -3,20 +3,34 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NETHERWORLD TERMINAL - Crypto & Forex Trading Signal Bot API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: signals
+    description: Trading signals
+  - name: trades
+    description: Active trades
+  - name: assets
+    description: Tracked assets
+  - name: stats
+    description: Performance statistics
+  - name: users
+    description: User management
+  - name: profile
+    description: Admin profile
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +38,628 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login as admin or user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current session info
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionInfo"
+        "401":
+          description: Not authenticated
+
+  /signals:
+    get:
+      operationId: listSignals
+      tags: [signals]
+      summary: List all signals (newest first)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: symbol
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Signal"
+
+  /signals/analyze:
+    post:
+      operationId: analyzeSignal
+      tags: [signals]
+      summary: Analyze a symbol on a given timeframe and generate a signal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeInput"
+      responses:
+        "200":
+          description: Signal generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Signal"
+        "409":
+          description: Active trade already exists for this symbol
+
+  /trades:
+    get:
+      operationId: listTrades
+      tags: [trades]
+      summary: List all active trades
+      responses:
+        "200":
+          description: Active trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
+
+  /trades/{id}/close:
+    post:
+      operationId: closeTrade
+      tags: [trades]
+      summary: Force close a trade (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trade closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trade"
+        "404":
+          description: Trade not found
+
+  /assets:
+    get:
+      operationId: listAssets
+      tags: [assets]
+      summary: List all tracked assets
+      responses:
+        "200":
+          description: Assets list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+    post:
+      operationId: createAsset
+      tags: [assets]
+      summary: Add a new asset to track
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetInput"
+      responses:
+        "201":
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+
+  /assets/{id}:
+    delete:
+      operationId: deleteAsset
+      tags: [assets]
+      summary: Remove a tracked asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Asset deleted
+
+  /stats/today:
+    get:
+      operationId: getTodayStats
+      tags: [stats]
+      summary: Get today's trading performance scorecard
+      responses:
+        "200":
+          description: Today's stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayStats"
+
+  /stats/portfolio:
+    get:
+      operationId: getPortfolio
+      tags: [stats]
+      summary: Get active trades with P/L
+      responses:
+        "200":
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+
+  /stats/history:
+    get:
+      operationId: getSignalHistory
+      tags: [stats]
+      summary: Get closed trade history with results
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Signal history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TradeResult"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all registered users (admin only)
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}/block:
+    post:
+      operationId: blockUser
+      tags: [users]
+      summary: Block a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/unblock:
+    post:
+      operationId: unblockUser
+      tags: [users]
+      summary: Unblock a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Remove a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: User deleted
+
+  /users/block-all:
+    post:
+      operationId: blockAllUsers
+      tags: [users]
+      summary: Block all non-admin users
+      responses:
+        "200":
+          description: All users blocked
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get admin profile
+      responses:
+        "200":
+          description: Admin profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update admin profile (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /market/price/{symbol}:
+    get:
+      operationId: getMarketPrice
+      tags: [signals]
+      summary: Get current price for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current price data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceData"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    LoginInput:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [admin, user]
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        deviceFingerprint:
+          type: ["string", "null"]
+
+    LoginResult:
+      type: object
+      required: [success, role, username]
+      properties:
+        success:
+          type: boolean
+        role:
+          type: string
+        username:
+          type: string
+        passkey:
+          type: ["string", "null"]
+
+    SessionInfo:
+      type: object
+      required: [authenticated, role, username]
+      properties:
+        authenticated:
+          type: boolean
+        role:
+          type: string
+        username:
+          type: string
+
+    Signal:
+      type: object
+      required: [id, symbol, timeframe, direction, strength, entryPrice, stopLoss, takeProfit, conditions, createdAt]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        strength:
+          type: integer
+          minimum: 1
+          maximum: 5
+        entryPrice:
+          type: number
+        stopLoss:
+          type: number
+        takeProfit:
+          type: number
+        conditions:
+          $ref: "#/components/schemas/SignalConditions"
+        status:
+          type: string
+          enum: [active, closed_tp, closed_sl, closed_manual]
+        createdAt:
+          type: string
+
+    SignalConditions:
+      type: object
+      required: [ema200, rsiDivergence, volumeSpike, supportResistance, momentum]
+      properties:
+        ema200:
+          type: boolean
+        rsiDivergence:
+          type: boolean
+        volumeSpike:
+          type: boolean
+        supportResistance:
+          type: boolean
+        momentum:
+          type: boolean
+
+    AnalyzeInput:
+      type: object
+      required: [symbol, timeframe]
+      properties:
+        symbol:
+          type: string
+        timeframe:
+          type: string
+
+    Trade:
+      type: object
+      required: [id, signalId, symbol, direction, entryPrice, stopLoss, takeProfit, currentPrice, pnlPercent, pnlAmount, entryTime, isActive]
+      properties:
+        id:
+          type: integer
+        signalId:
+          type: integer
+        symbol:
+          type: string
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        entryPrice:
+          type: number
+        stopLoss:
+          type: number
+        takeProfit:
+          type: number
+        currentPrice:
+          type: number
+        pnlPercent:
+          type: number
+        pnlAmount:
+          type: number
+        entryTime:
+          type: string
+        isActive:
+          type: boolean
+        closedAt:
+          type: ["string", "null"]
+        closeReason:
+          type: ["string", "null"]
+
+    Asset:
+      type: object
+      required: [id, symbol, type, isActive]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [crypto, forex]
+        isActive:
+          type: boolean
+
+    AssetInput:
+      type: object
+      required: [symbol, type]
+      properties:
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [crypto, forex]
+
+    TodayStats:
+      type: object
+      required: [totalSignals, tpHits, slHits, manualCloses, winRate, bestTrade, worstTrade]
+      properties:
+        totalSignals:
+          type: integer
+        tpHits:
+          type: integer
+        slHits:
+          type: integer
+        manualCloses:
+          type: integer
+        winRate:
+          type: number
+        bestTrade:
+          type: ["string", "null"]
+        worstTrade:
+          type: ["string", "null"]
+
+    Portfolio:
+      type: object
+      required: [trades, totalPnlPercent, totalPnlAmount]
+      properties:
+        trades:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trade"
+        totalPnlPercent:
+          type: number
+        totalPnlAmount:
+          type: number
+
+    TradeResult:
+      type: object
+      required: [id, symbol, direction, entryPrice, exitPrice, pnlPercent, pnlAmount, closeReason, entryTime, closedAt]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        direction:
+          type: string
+        entryPrice:
+          type: number
+        exitPrice:
+          type: number
+        pnlPercent:
+          type: number
+        pnlAmount:
+          type: number
+        closeReason:
+          type: string
+        entryTime:
+          type: string
+        closedAt:
+          type: string
+
+    User:
+      type: object
+      required: [id, username, deviceInfo, isBlocked, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        deviceInfo:
+          type: ["string", "null"]
+        isBlocked:
+          type: boolean
+        createdAt:
+          type: string
+
+    Profile:
+      type: object
+      required: [id, creatorName, bio, contactInfo, socialLinks, photoUrl]
+      properties:
+        id:
+          type: integer
+        creatorName:
+          type: string
+        bio:
+          type: ["string", "null"]
+        contactInfo:
+          type: ["string", "null"]
+        socialLinks:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+
+    ProfileUpdate:
+      type: object
+      properties:
+        creatorName:
+          type: string
+        bio:
+          type: ["string", "null"]
+        contactInfo:
+          type: ["string", "null"]
+        socialLinks:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+
+    PriceData:
+      type: object
+      required: [symbol, price, change24h, high24h, low24h]
+      properties:
+        symbol:
+          type: string
+        price:
+          type: number
+        change24h:
+          type: number
+        high24h:
+          type: number
+        low24h:
+          type: number

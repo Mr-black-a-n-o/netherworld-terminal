@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "NETHERWORLD TERMINAL"
+version = "1.0.0"
+id = "artifacts/netherworld"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23294
+
+[services.development]
+run = "pnpm --filter @workspace/netherworld run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/netherworld", "run", "build" ]
+publicDir = "artifacts/netherworld/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23294"
+BASE_PATH = "/"
