@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#000000"/>
+  <!-- Skull head -->
+  <ellipse cx="256" cy="210" rx="140" ry="130" fill="#cc0000"/>
+  <!-- Eye sockets -->
+  <ellipse cx="200" cy="195" rx="38" ry="42" fill="#000000"/>
+  <ellipse cx="312" cy="195" rx="38" ry="42" fill="#000000"/>
+  <!-- Eye glow -->
+  <ellipse cx="200" cy="195" rx="22" ry="26" fill="#ff0000" opacity="0.8"/>
+  <ellipse cx="312" cy="195" rx="22" ry="26" fill="#ff0000" opacity="0.8"/>
+  <!-- Nose cavity -->
+  <path d="M244 245 L256 230 L268 245 L262 262 L250 262 Z" fill="#000000"/>
+  <!-- Jaw -->
+  <rect x="160" y="305" width="192" height="55" rx="8" fill="#aa0000"/>
+  <!-- Teeth -->
+  <rect x="172" y="308" width="24" height="38" rx="3" fill="#000000"/>
+  <rect x="204" y="308" width="24" height="44" rx="3" fill="#000000"/>
+  <rect x="236" y="308" width="24" height="44" rx="3" fill="#000000"/>
+  <rect x="268" y="308" width="24" height="44" rx="3" fill="#000000"/>
+  <rect x="300" y="308" width="24" height="38" rx="3" fill="#000000"/>
+  <!-- Cheekbone lines -->
+  <path d="M130 260 Q150 280 170 270" stroke="#880000" stroke-width="6" fill="none"/>
+  <path d="M382 260 Q362 280 342 270" stroke="#880000" stroke-width="6" fill="none"/>
+  <!-- Outer glow suggestion -->
+  <ellipse cx="256" cy="210" rx="140" ry="130" fill="none" stroke="#ff000044" stroke-width="8"/>
+</svg>

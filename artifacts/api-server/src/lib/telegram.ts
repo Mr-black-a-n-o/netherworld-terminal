@@ -48,17 +48,8 @@ export function initTelegramBot(): void {
         }
         if (text === "/start" || text === "/help") {
           await bot!.sendMessage(chatId,
-            `☠️ *NETHERWORLD TERMINAL — ham_evil_bot*\n\n` +
-            `Send me a symbol + timeframe to get a signal:\n` +
-            `Examples: \`BTCUSDT 1h\` or \`EURUSD 4h\`\n\n` +
-            `*Supported timeframes:* 1m 5m 15m 30m 1h 4h 12h 1d\n\n` +
-            `*Admin Commands:*\n` +
-            `/profit or /p — Active trades P/L\n` +
-            `/die SYMBOL — Force close a trade\n` +
-            `/stats — Today's scorecard\n` +
-            `/portfolio — Active positions\n\n` +
-            `_Powered by Mr.black_a_n_o_ ☠️`,
-            { parse_mode: "Markdown" }
+            '☠️ NETHERWORLD TERMINAL — ham_evil_bot\n\nSend me a symbol + timeframe to get a signal:\nExamples: BTCUSDT 1h or EURUSD 4h\n\nSupported timeframes: 1m 5m 15m 30m 1h 4h 12h 1d\n\nAdmin Commands:\n/profit or /p — Active trades P/L\n/die SYMBOL — Force close a trade\n/stats — Todays scorecard\n/portfolio — Active positions\n\nPowered by Mr.black_a_n_o ☠️',
+            { parse_mode: undefined }
           );
           return;
         }
