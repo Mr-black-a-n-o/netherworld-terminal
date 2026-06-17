@@ -4,14 +4,48 @@ import { db, signalsTable, tradesTable, assetsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { fetchPrice } from "./market";
 import { analyzeAsset } from "./analyzer";
-import { sendTelegramAlert } from "./telegram";
+import { broadcastToAdmin } from "./telegram";
+
+// Format a price nicely: large numbers get commas, small get 6 dp
+function fmtPrice(n: number): string {
+  if (n >= 1) {
+    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return n.toFixed(6);
+}
+
+// Format a duration in ms to "Xh Ym"
+function fmtDuration(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60000);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+// Format time as IST (UTC+5:30)
+function fmtIST(date: Date): string {
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+const STRENGTH_LABELS: Record<number, string> = {
+  1: "VERY WEAK",
+  2: "WEAK",
+  3: "MODERATE",
+  4: "STRONG",
+  5: "ELITE",
+};
 
 export function initScheduler(): void {
-  // Every 15 minutes: check active trades for TP/SL hits and analyze assets
   cron.schedule("*/15 * * * *", async () => {
     logger.info("Scheduler: running 15-minute scan");
     await checkActiveTrades();
-    await analyzeScheduledAssets();
+    await broadcastAutoSignals();
   });
 
   logger.info("Scheduler initialized (every 15 minutes)");
@@ -32,26 +66,19 @@ async function checkActiveTrades(): Promise<void> {
       let closed = false;
       let closeReason = "";
       let status = "";
+      let isTP = false;
 
       if (trade.direction === "BUY") {
         if (currentPrice >= trade.takeProfit) {
-          closed = true;
-          closeReason = "tp";
-          status = "closed_tp";
+          closed = true; closeReason = "tp"; status = "closed_tp"; isTP = true;
         } else if (currentPrice <= trade.stopLoss) {
-          closed = true;
-          closeReason = "sl";
-          status = "closed_sl";
+          closed = true; closeReason = "sl"; status = "closed_sl"; isTP = false;
         }
       } else {
         if (currentPrice <= trade.takeProfit) {
-          closed = true;
-          closeReason = "tp";
-          status = "closed_tp";
+          closed = true; closeReason = "tp"; status = "closed_tp"; isTP = true;
         } else if (currentPrice >= trade.stopLoss) {
-          closed = true;
-          closeReason = "sl";
-          status = "closed_sl";
+          closed = true; closeReason = "sl"; status = "closed_sl"; isTP = false;
         }
       }
 
@@ -61,6 +88,14 @@ async function checkActiveTrades(): Promise<void> {
       const pnlAmt = pnlPct * 100;
 
       if (closed) {
+        const entryTime = new Date(trade.entryTime);
+        const timeActive = fmtDuration(now.getTime() - entryTime.getTime());
+        const pnlSign = pnlPct >= 0 ? "+" : "";
+        const amtSign = pnlAmt >= 0 ? "+" : "";
+        const exitLabel = isTP
+          ? `${fmtPrice(currentPrice)} (TP Hit ✅)`
+          : `${fmtPrice(currentPrice)} (SL Hit ❌)`;
+
         await db.update(tradesTable).set({
           isActive: false,
           currentPrice,
@@ -75,21 +110,24 @@ async function checkActiveTrades(): Promise<void> {
           .set({ status })
           .where(eq(signalsTable.id, trade.signalId));
 
-        const emoji = closeReason === "tp" ? "🎯" : "💀";
+        const header = isTP
+          ? "✅ TRADE CLOSED - TAKE PROFIT HIT"
+          : "❌ TRADE CLOSED - STOP LOSS HIT";
+
         const msg =
-          `${emoji} *TRADE ${closeReason === "tp" ? "TP HIT" : "SL HIT"}*\n` +
+          `${header}\n` +
           `━━━━━━━━━━━━━━━\n` +
           `🪙 ${trade.symbol} - ${trade.direction}\n` +
-          `Entry: ${trade.entryPrice.toFixed(6)}\n` +
-          `Exit: ${currentPrice.toFixed(6)}\n` +
-          `Result: ${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}% | ${pnlAmt >= 0 ? "+" : ""}$${Math.abs(pnlAmt).toFixed(0)}\n` +
+          `Entry: ${fmtPrice(trade.entryPrice)}\n` +
+          `Exit: ${exitLabel}\n` +
+          `Result: ${pnlSign}${pnlPct.toFixed(2)}% | ${amtSign}$${Math.abs(pnlAmt).toFixed(0)}\n` +
+          `Time Active: ${timeActive}\n` +
           `━━━━━━━━━━━━━━━\n` +
-          `Trade unlocked ✅`;
+          `Coin unlocked for next signal ✅`;
 
-        await sendTelegramAlert(msg);
-        logger.info({ symbol: trade.symbol, closeReason, pnlPct }, "Trade closed");
+        await broadcastToAdmin(msg);
+        logger.info({ symbol: trade.symbol, closeReason, pnlPct }, "Trade auto-closed");
       } else {
-        // Update current price and PnL
         await db.update(tradesTable).set({
           currentPrice,
           pnlPercent: pnlPct,
@@ -102,7 +140,7 @@ async function checkActiveTrades(): Promise<void> {
   }
 }
 
-async function analyzeScheduledAssets(): Promise<void> {
+async function broadcastAutoSignals(): Promise<void> {
   const assets = await db
     .select()
     .from(assetsTable)
@@ -110,7 +148,7 @@ async function analyzeScheduledAssets(): Promise<void> {
 
   for (const asset of assets) {
     try {
-      // Only auto-analyze if no active trade for this asset
+      // Skip if there's already an active trade for this asset
       const [existing] = await db
         .select()
         .from(tradesTable)
@@ -121,39 +159,68 @@ async function analyzeScheduledAssets(): Promise<void> {
 
       const analysis = await analyzeAsset(asset.symbol, "1h");
 
-      // Only save signals with strength >= 3 in auto-mode
-      if (analysis.strength >= 3) {
-        const [signal] = await db.insert(signalsTable).values({
-          symbol: asset.symbol,
-          timeframe: "1h",
-          direction: analysis.direction,
-          strength: analysis.strength,
-          entryPrice: analysis.entryPrice,
-          stopLoss: analysis.stopLoss,
-          takeProfit: analysis.takeProfit,
-          conditionEma200: analysis.conditions.ema200,
-          conditionRsiDivergence: analysis.conditions.rsiDivergence,
-          conditionVolumeSpike: analysis.conditions.volumeSpike,
-          conditionSupportResistance: analysis.conditions.supportResistance,
-          conditionMomentum: analysis.conditions.momentum,
-          status: "active",
-        }).returning();
+      // Only broadcast signals with strength >= 3
+      if (analysis.strength < 3) continue;
 
-        await db.insert(tradesTable).values({
-          signalId: signal.id,
-          symbol: asset.symbol,
-          direction: analysis.direction,
-          entryPrice: analysis.entryPrice,
-          stopLoss: analysis.stopLoss,
-          takeProfit: analysis.takeProfit,
-          currentPrice: analysis.entryPrice,
-          pnlPercent: 0,
-          pnlAmount: 0,
-          isActive: true,
-        });
+      // Save signal to DB
+      const [signal] = await db.insert(signalsTable).values({
+        symbol: asset.symbol,
+        timeframe: "1h",
+        direction: analysis.direction,
+        strength: analysis.strength,
+        entryPrice: analysis.entryPrice,
+        stopLoss: analysis.stopLoss,
+        takeProfit: analysis.takeProfit,
+        conditionEma200: analysis.conditions.ema200,
+        conditionRsiDivergence: analysis.conditions.rsiDivergence,
+        conditionVolumeSpike: analysis.conditions.volumeSpike,
+        conditionSupportResistance: analysis.conditions.supportResistance,
+        conditionMomentum: analysis.conditions.momentum,
+        status: "active",
+      }).returning();
 
-        logger.info({ symbol: asset.symbol, strength: analysis.strength }, "Auto-signal generated");
-      }
+      await db.insert(tradesTable).values({
+        signalId: signal.id,
+        symbol: asset.symbol,
+        direction: analysis.direction,
+        entryPrice: analysis.entryPrice,
+        stopLoss: analysis.stopLoss,
+        takeProfit: analysis.takeProfit,
+        currentPrice: analysis.entryPrice,
+        pnlPercent: 0,
+        pnlAmount: 0,
+        isActive: true,
+      });
+
+      // Build and send Telegram broadcast
+      const dirEmoji = analysis.direction === "BUY" ? "📈" : "📉";
+      const strengthLabel = STRENGTH_LABELS[analysis.strength] || "MODERATE";
+      const now = new Date();
+
+      const c = analysis.conditions;
+      const condLines = [
+        `${c.ema200 ? "✅" : "❌"} EMA200: ${c.ema200 ? "Pass" : "Fail"}`,
+        `${c.rsiDivergence ? "✅" : "❌"} RSI: ${c.rsiDivergence ? "Pass" : "Fail"}`,
+        `${c.volumeSpike ? "✅" : "❌"} Volume: ${c.volumeSpike ? "Pass" : "Fail"}`,
+        `${c.supportResistance ? "✅" : "❌"} S/R Zone: ${c.supportResistance ? "Pass" : "Fail"}`,
+        `${c.momentum ? "✅" : "❌"} Momentum: ${c.momentum ? "Pass" : "Fail"}`,
+      ].join("\n");
+
+      const msg =
+        `⚡ AUTO SIGNAL — ${asset.symbol}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `${dirEmoji} ${analysis.direction}\n` +
+        `💰 Entry: ${fmtPrice(analysis.entryPrice)}\n` +
+        `🎯 TP: ${fmtPrice(analysis.takeProfit)}\n` +
+        `🛑 SL: ${fmtPrice(analysis.stopLoss)}\n` +
+        `⚡ Strength: ${strengthLabel} ${analysis.strength}/5\n` +
+        `${condLines}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `🕐 Entry Time: ${fmtIST(now)} IST\n` +
+        `📊 Timeframe: 1h`;
+
+      await broadcastToAdmin(msg);
+      logger.info({ symbol: asset.symbol, strength: analysis.strength, direction: analysis.direction }, "Auto-signal broadcast sent");
     } catch (err) {
       logger.error({ err, symbol: asset.symbol }, "Error in scheduled analysis");
     }

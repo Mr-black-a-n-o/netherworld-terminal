@@ -303,17 +303,20 @@ async function handleStats(chatId: number): Promise<void> {
   await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
 }
 
-export async function sendTelegramAlert(message: string): Promise<void> {
+// Hardcoded admin chat ID — all auto alerts and broadcasts go here
+const ADMIN_CHAT_ID = 6897968779;
+
+export async function broadcastToAdmin(message: string): Promise<void> {
   if (!bot) return;
   try {
-    // Get all user chat IDs from DB (or use a configured admin chat ID)
-    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
-    if (adminChatId) {
-      await bot.sendMessage(parseInt(adminChatId), message, { parse_mode: "Markdown" });
-    }
+    await bot.sendMessage(ADMIN_CHAT_ID, message);
   } catch (err) {
-    logger.error({ err }, "Failed to send Telegram alert");
+    logger.error({ err }, "Failed to broadcast to admin");
   }
+}
+
+export async function sendTelegramAlert(message: string): Promise<void> {
+  await broadcastToAdmin(message);
 }
 
 export { getBot };
