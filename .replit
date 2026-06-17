@@ -37,4 +37,3 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-TELEGRAM_TOKEN = "8975996297:AAEt5N2N3k1340TrkhyMkvMlF1Pq6PeInAE"
