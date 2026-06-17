@@ -21,27 +21,46 @@ function usePWAInstall() {
   }, []);
 
   const install = async () => {
-    if (!prompt) return;
-    prompt.prompt();
-    const { outcome } = await prompt.userChoice;
-    if (outcome === "accepted") setInstalled(true);
-    setPrompt(null);
+    if (prompt) {
+      prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === "accepted") setInstalled(true);
+      setPrompt(null);
+    } else {
+      // Fallback: guide user to install manually
+      alert("To install: tap your browser's Share button → 'Add to Home Screen'  (iOS) or use the browser menu → 'Install app' (Android/Chrome)");
+    }
   };
 
-  return { canInstall: !!prompt && !installed, install };
+  return { installed, install };
+}
+
+function InstallButton({ className = "" }: { className?: string }) {
+  const { installed, install } = usePWAInstall();
+  if (installed) return null;
+  return (
+    <button
+      onClick={install}
+      title="Install App"
+      className={`flex items-center gap-1.5 px-3 py-1.5 border border-accent text-accent hover:bg-accent hover:text-black font-bold tracking-widest uppercase text-xs transition-all ${className}`}
+      style={{ boxShadow: "0 0 8px rgba(147,51,234,0.4)" }}
+    >
+      <Download size={12} />
+      <span>Install</span>
+    </button>
+  );
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin, logout } = useAuth();
   const [location] = useLocation();
-  const { canInstall, install } = usePWAInstall();
 
   const navItems = [
-    { href: "/dashboard",    label: "Dashboard",    icon: LayoutDashboard },
-    { href: "/signals",      label: "Signals",      icon: Activity },
-    { href: "/assets",       label: "Assets",       icon: Wallet },
-    { href: "/performance",  label: "Performance",  icon: ShieldAlert },
-    { href: "/settings",     label: "Settings",     icon: Settings },
+    { href: "/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
+    { href: "/signals",     label: "Signals",     icon: Activity },
+    { href: "/assets",      label: "Assets",      icon: Wallet },
+    { href: "/performance", label: "Performance", icon: ShieldAlert },
+    { href: "/settings",    label: "Settings",    icon: Settings },
   ];
 
   const allNavItems = [
@@ -50,7 +69,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/profile", label: "Profile", icon: UserIcon },
   ];
 
-  // Bottom nav shows first 4 + profile (5 items max)
   const bottomNav = isAdmin
     ? [navItems[0], navItems[1], navItems[2], { href: "/users", label: "Users", icon: Users }, { href: "/profile", label: "Profile", icon: UserIcon }]
     : [...navItems.slice(0, 4), { href: "/profile", label: "Profile", icon: UserIcon }];
@@ -62,20 +80,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-56 lg:w-64 border-r border-border bg-card shadow-[0_0_15px_rgba(0,0,0,0.5)] z-40 flex-shrink-0">
-        <div className="p-4 lg:p-6 border-b border-border flex items-center justify-between gap-2">
-          <div>
-            <h1 className="text-lg lg:text-xl font-bold text-primary animate-glow-pulse tracking-tight">NETHERWORLD</h1>
-            <h2 className="text-xs text-accent tracking-widest mt-0.5">TERMINAL ⚡</h2>
-          </div>
-          {canInstall && (
-            <button
-              onClick={install}
-              title="Install App"
-              className="p-1.5 text-accent border border-accent/40 hover:bg-accent/10 transition-colors flex-shrink-0"
-            >
-              <Download size={14} />
-            </button>
-          )}
+        <div className="p-4 lg:p-6 border-b border-border">
+          <h1 className="text-lg lg:text-xl font-bold text-primary animate-glow-pulse tracking-tight">NETHERWORLD</h1>
+          <h2 className="text-xs text-accent tracking-widest mt-0.5">TERMINAL ⚡</h2>
+          <InstallButton className="mt-3 w-full justify-center" />
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
@@ -97,7 +105,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-
           <div className="my-4 border-t border-border" />
         </nav>
 
@@ -122,15 +129,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <p className="text-[10px] text-accent tracking-widest">TERMINAL ⚡</p>
         </div>
         <div className="flex items-center gap-2">
-          {canInstall && (
-            <button
-              onClick={install}
-              className="p-2 text-accent border border-accent/40 hover:bg-accent/10 transition-colors"
-              title="Install App"
-            >
-              <Download size={16} />
-            </button>
-          )}
+          <InstallButton />
           <button
             onClick={logout}
             className="p-2 text-destructive border border-destructive/40 hover:bg-destructive/10 transition-colors"
@@ -141,7 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative z-10 overflow-auto" style={{ height: "calc(100vh - 53px)", paddingBottom: "64px" }}>
+      <main className="flex-1 flex flex-col relative z-10 overflow-auto md:h-screen" style={{ paddingBottom: "64px" }}>
         <div className="absolute inset-0 pointer-events-none opacity-5 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:30px_30px]" />
         <div className="fixed inset-0 pointer-events-none z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%] opacity-10" />
 
@@ -155,8 +154,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm z-40"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm z-40"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="flex justify-around">
           {bottomNav.map((item) => {
             const isActive = location === item.href;
@@ -169,11 +170,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                <div className={`p-1.5 rounded-none transition-all ${isActive ? "bg-primary/10" : ""}`}>
+                <div className={`p-1.5 transition-all ${isActive ? "bg-primary/10" : ""}`}>
                   <Icon size={18} />
                 </div>
                 <span className="text-[9px] mt-0.5 tracking-wide truncate w-full text-center">{item.label}</span>
-                {isActive && <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" style={{ left: `${(bottomNav.findIndex(n => n.href === item.href) / bottomNav.length) * 100}%`, width: `${100 / bottomNav.length}%` }} />}
               </Link>
             );
           })}

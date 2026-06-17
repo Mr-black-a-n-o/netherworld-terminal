@@ -93,7 +93,7 @@ export default function IntroScreen() {
   const particlesRef = useRef<Particle[]>([]);
   const animRef = useRef<number>(0);
   const [exploded, setExploded] = useState(false);
-  const [countdown, setCountdown] = useState(9);
+  const [countdown, setCountdown] = useState(5);
   const [fading, setFading] = useState(false);
   const explodedRef = useRef(false);
 
@@ -291,7 +291,7 @@ export default function IntroScreen() {
             <div
               className="h-full transition-all duration-1000 ease-linear"
               style={{
-                width: `${((9 - countdown) / 9) * 100}%`,
+                width: `${((5 - countdown) / 5) * 100}%`,
                 background: "linear-gradient(90deg, #660022, #ff0044)",
                 boxShadow: "0 0 8px #ff0044",
               }}

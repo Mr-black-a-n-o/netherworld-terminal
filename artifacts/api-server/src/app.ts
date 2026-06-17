@@ -26,6 +26,10 @@ app.use(
         };
       },
     },
+    // Don't log /ping to avoid noise
+    autoLogging: {
+      ignore: (req) => req.url === "/api/ping",
+    },
   }),
 );
 
@@ -45,15 +49,28 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === "production",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   },
 }));
 
 app.use("/api", router);
 
-// Initialize Telegram bot and scheduler after app is set up
 initTelegramBot();
 initScheduler();
+
+// Self-ping every 4 minutes to keep the Replit free tier alive
+const SELF_PING_INTERVAL = 4 * 60 * 1000;
+function startKeepAlive() {
+  setInterval(async () => {
+    try {
+      const port = process.env.PORT || 8080;
+      await fetch(`http://localhost:${port}/api/ping`);
+    } catch {
+      // silently ignore — server may be mid-restart
+    }
+  }, SELF_PING_INTERVAL);
+}
+startKeepAlive();
 
 export default app;
