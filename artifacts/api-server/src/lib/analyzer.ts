@@ -63,11 +63,20 @@ function calcMACD(closes: number[]): { macd: number; signal: number } {
   };
 }
 
-export async function analyzeAsset(symbol: string, timeframe: string): Promise<AnalysisResult> {
-  logger.info({ symbol, timeframe }, "Analyzing asset");
+const VALID_SYMBOLS = new Set([
+  "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT",
+  "EURUSD", "GBPUSD", "USDJPY",
+]);
 
-  const candles = await fetchCandles(symbol, timeframe, 250);
-  const priceData = await fetchPrice(symbol);
+export async function analyzeAsset(symbol: string, timeframe: string): Promise<AnalysisResult> {
+  const sym = symbol.toUpperCase();
+  if (!VALID_SYMBOLS.has(sym)) {
+    throw new Error(`Invalid symbol: ${sym}. Supported: ${[...VALID_SYMBOLS].join(", ")}`);
+  }
+  logger.info({ symbol: sym, timeframe }, "Analyzing asset");
+
+  const candles = await fetchCandles(sym, timeframe, 250);
+  const priceData = await fetchPrice(sym);
   const currentPrice = priceData.price;
 
   const closes = candles.map(c => c.close);

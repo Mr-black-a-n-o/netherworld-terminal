@@ -79,13 +79,16 @@ export async function fetchPrice(symbol: string): Promise<PriceData> {
       };
     }
   } catch (err) {
-    logger.warn({ symbol, err }, "Failed to fetch price, using mock");
-    // Fallback mock prices
-    const mockPrices: Record<string, number> = {
+    logger.warn({ symbol, err }, "Failed to fetch price, using fallback");
+    // Fallback prices for known symbols only — unknown symbols throw to prevent fake trades
+    const fallbackPrices: Record<string, number> = {
       BTCUSDT: 67000, ETHUSDT: 3500, BNBUSDT: 580, SOLUSDT: 165,
       EURUSD: 1.085, GBPUSD: 1.265, USDJPY: 149.5,
     };
-    const price = mockPrices[sym] ?? 100;
+    if (!(sym in fallbackPrices)) {
+      throw new Error(`Unknown symbol: ${sym}. Only BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, EURUSD, GBPUSD, USDJPY are supported.`);
+    }
+    const price = fallbackPrices[sym];
     return { symbol: sym, price, change24h: 0.5, high24h: price * 1.02, low24h: price * 0.98 };
   }
 }

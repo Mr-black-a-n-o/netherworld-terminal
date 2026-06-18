@@ -115,8 +115,21 @@ export function initTelegramBot(): void {
   }
 }
 
+const VALID_SYMBOLS = new Set([
+  "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT",
+  "EURUSD", "GBPUSD", "USDJPY",
+]);
+
 async function handleSignalRequest(chatId: number, symbol: string, timeframe: string): Promise<void> {
   if (!bot) return;
+
+  if (!VALID_SYMBOLS.has(symbol)) {
+    await bot.sendMessage(
+      chatId,
+      `❌ Unknown symbol: ${symbol}\n\nSupported: BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, EURUSD, GBPUSD, USDJPY`
+    );
+    return;
+  }
 
   // Check for existing active trade
   const [existingTrade] = await db
