@@ -6,7 +6,6 @@ import { fetchPrice } from "./market";
 import { analyzeAsset } from "./analyzer";
 import { broadcastToAdmin } from "./telegram";
 
-// Format a price nicely: large numbers get commas, small get 6 dp
 function fmtPrice(n: number): string {
   if (n >= 1) {
     return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -14,7 +13,6 @@ function fmtPrice(n: number): string {
   return n.toFixed(6);
 }
 
-// Format a duration in ms to "Xh Ym"
 function fmtDuration(ms: number): string {
   const totalMinutes = Math.floor(ms / 60000);
   const h = Math.floor(totalMinutes / 60);
@@ -23,7 +21,6 @@ function fmtDuration(ms: number): string {
   return `${h}h ${m}m`;
 }
 
-// Format time as IST (UTC+5:30)
 function fmtIST(date: Date): string {
   return date.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -148,7 +145,6 @@ async function broadcastAutoSignals(): Promise<void> {
 
   for (const asset of assets) {
     try {
-      // Skip if there's already an active trade for this asset
       const [existing] = await db
         .select()
         .from(tradesTable)
@@ -159,10 +155,9 @@ async function broadcastAutoSignals(): Promise<void> {
 
       const analysis = await analyzeAsset(asset.symbol, "1h");
 
-      // Only broadcast signals with strength >= 3
-      if (analysis.strength < 3) continue;
+      // Only broadcast ELITE signals (strength 4 or 5)
+      if (analysis.strength < 4) continue;
 
-      // Save signal to DB
       const [signal] = await db.insert(signalsTable).values({
         symbol: asset.symbol,
         timeframe: "1h",
@@ -192,19 +187,10 @@ async function broadcastAutoSignals(): Promise<void> {
         isActive: true,
       });
 
-      // Build and send Telegram broadcast
       const dirEmoji = analysis.direction === "BUY" ? "📈" : "📉";
-      const strengthLabel = STRENGTH_LABELS[analysis.strength] || "MODERATE";
+      const strengthLabel = STRENGTH_LABELS[analysis.strength] || "STRONG";
       const now = new Date();
-
       const c = analysis.conditions;
-      const condLines = [
-        `${c.ema200 ? "✅" : "❌"} EMA200: ${c.ema200 ? "Pass" : "Fail"}`,
-        `${c.rsiDivergence ? "✅" : "❌"} RSI: ${c.rsiDivergence ? "Pass" : "Fail"}`,
-        `${c.volumeSpike ? "✅" : "❌"} Volume: ${c.volumeSpike ? "Pass" : "Fail"}`,
-        `${c.supportResistance ? "✅" : "❌"} S/R Zone: ${c.supportResistance ? "Pass" : "Fail"}`,
-        `${c.momentum ? "✅" : "❌"} Momentum: ${c.momentum ? "Pass" : "Fail"}`,
-      ].join("\n");
 
       const msg =
         `⚡ AUTO SIGNAL — ${asset.symbol}\n` +
@@ -214,13 +200,17 @@ async function broadcastAutoSignals(): Promise<void> {
         `🎯 TP: ${fmtPrice(analysis.takeProfit)}\n` +
         `🛑 SL: ${fmtPrice(analysis.stopLoss)}\n` +
         `⚡ Strength: ${strengthLabel} ${analysis.strength}/5\n` +
-        `${condLines}\n` +
+        `${c.ema200 ? "✅" : "❌"} EMA200: ${c.ema200 ? "Pass" : "Fail"}\n` +
+        `${c.rsiDivergence ? "✅" : "❌"} RSI: ${c.rsiDivergence ? "Pass" : "Fail"}\n` +
+        `${c.volumeSpike ? "✅" : "❌"} Volume: ${c.volumeSpike ? "Pass" : "Fail"}\n` +
+        `${c.supportResistance ? "✅" : "❌"} S/R Zone: ${c.supportResistance ? "Pass" : "Fail"}\n` +
+        `${c.momentum ? "✅" : "❌"} Momentum: ${c.momentum ? "Pass" : "Fail"}\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `🕐 Entry Time: ${fmtIST(now)} IST\n` +
+        `🕐 Entry Time: ${fmtIST(now)}\n` +
         `📊 Timeframe: 1h`;
 
       await broadcastToAdmin(msg);
-      logger.info({ symbol: asset.symbol, strength: analysis.strength, direction: analysis.direction }, "Auto-signal broadcast sent");
+      logger.info({ symbol: asset.symbol, strength: analysis.strength, direction: analysis.direction }, "Elite auto-signal broadcast");
     } catch (err) {
       logger.error({ err, symbol: asset.symbol }, "Error in scheduled analysis");
     }

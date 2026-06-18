@@ -26,7 +26,6 @@ app.use(
         };
       },
     },
-    // Don't log /ping to avoid noise
     autoLogging: {
       ignore: (req) => req.url === "/api/ping",
     },
@@ -38,8 +37,9 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase payload limit to handle base64 profile photos (up to 10 MB)
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 const sessionSecret = process.env.SESSION_SECRET || "netherworld-secret-fallback";
 

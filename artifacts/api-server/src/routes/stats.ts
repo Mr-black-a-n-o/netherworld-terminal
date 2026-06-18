@@ -9,10 +9,8 @@ router.get("/stats/today", async (req, res): Promise<void> => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const allSignals = await db
-    .select()
-    .from(signalsTable)
-    .where(gte(signalsTable.createdAt, today));
+  // All-time total signals count
+  const allSignals = await db.select().from(signalsTable);
 
   const closedTrades = await db
     .select()

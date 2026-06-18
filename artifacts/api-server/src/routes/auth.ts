@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -36,23 +36,49 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       return;
     }
 
-    const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, clean)).limit(1);
+    // ── Device-fingerprint block check ──────────────────────────────────────
+    // If the incoming device fingerprint matches any blocked user, deny access
+    // regardless of what name they try to use.
+    if (deviceFingerprint) {
+      const [blockedDevice] = await db
+        .select()
+        .from(usersTable)
+        .where(and(eq(usersTable.deviceFingerprint, deviceFingerprint), eq(usersTable.isBlocked, true)))
+        .limit(1);
+
+      if (blockedDevice) {
+        res.status(403).json({ error: "BLOCKED", message: "Access denied — your device has been blocked" });
+        return;
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.username, clean))
+      .limit(1);
 
     if (existing) {
       if (existing.isBlocked) {
         res.status(403).json({ error: "BLOCKED", message: "Access denied — you have been blocked" });
         return;
       }
-      if (existing.deviceFingerprint && deviceFingerprint && existing.deviceFingerprint !== deviceFingerprint) {
-        res.status(401).json({ error: "This passkey does not work on this device" });
-        return;
+
+      // Update device fingerprint if changed (handles fingerprint algorithm upgrades)
+      if (deviceFingerprint && existing.deviceFingerprint !== deviceFingerprint) {
+        await db.update(usersTable)
+          .set({ deviceFingerprint })
+          .where(eq(usersTable.id, existing.id));
       }
+
       req.session.role = "user";
       req.session.username = clean;
-      res.json({ success: true, role: "user", username: clean, passkey: existing.deviceFingerprint });
+      res.json({ success: true, role: "user", username: clean, passkey: deviceFingerprint || existing.deviceFingerprint });
       return;
     }
 
+    // New user — register with their device fingerprint
     const passkey = deviceFingerprint || Math.random().toString(36).slice(2, 10).toUpperCase();
     await db.insert(usersTable).values({
       username: clean,

@@ -9,8 +9,6 @@ import { Copy } from "lucide-react";
 function playHorrorSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    // Deep drone
     const drone = ctx.createOscillator();
     const droneGain = ctx.createGain();
     drone.type = "sawtooth";
@@ -24,7 +22,6 @@ function playHorrorSound() {
     drone.start();
     drone.stop(ctx.currentTime + 4);
 
-    // Dissonant tone
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = "square";
@@ -38,7 +35,6 @@ function playHorrorSound() {
     osc2.start();
     osc2.stop(ctx.currentTime + 3);
 
-    // Noise burst
     const buf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) {
@@ -59,27 +55,16 @@ function TerrorScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
 
-  useEffect(() => {
-    playHorrorSound();
-  }, []);
+  useEffect(() => { playHorrorSound(); }, []);
 
-  // Skull rain on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-
-    interface Skull {
-      x: number;
-      y: number;
-      speed: number;
-      size: number;
-      opacity: number;
-    }
+    interface Skull { x: number; y: number; speed: number; size: number; opacity: number; }
     const skulls: Skull[] = Array.from({ length: 60 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * -window.innerHeight,
@@ -87,19 +72,14 @@ function TerrorScreen() {
       size: Math.random() * 22 + 10,
       opacity: Math.random() * 0.7 + 0.3,
     }));
-
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${20}px serif`;
       for (const s of skulls) {
         ctx.globalAlpha = s.opacity;
         ctx.font = `${s.size}px serif`;
         ctx.fillText("☠️", s.x, s.y);
         s.y += s.speed;
-        if (s.y > canvas.height + 40) {
-          s.y = -40;
-          s.x = Math.random() * canvas.width;
-        }
+        if (s.y > canvas.height + 40) { s.y = -40; s.x = Math.random() * canvas.width; }
       }
       ctx.globalAlpha = 1;
       animRef.current = requestAnimationFrame(draw);
@@ -109,10 +89,7 @@ function TerrorScreen() {
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 bg-black z-50 overflow-hidden"
-      style={{ animation: "terrorShake 0.15s infinite" }}
-    >
+    <div className="fixed inset-0 bg-black z-50 overflow-hidden" style={{ animation: "terrorShake 0.15s infinite" }}>
       <style>{`
         @keyframes terrorShake {
           0%   { transform: translate(0,0) rotate(0deg); }
@@ -134,10 +111,6 @@ function TerrorScreen() {
           0%, 100% { opacity: 1; text-shadow: 0 0 10px #ff0000, 0 0 30px #ff0000, 0 0 60px #ff0000; }
           50% { opacity: 0.3; text-shadow: 0 0 2px #ff0000; }
         }
-        @keyframes bloodDrip {
-          0%   { height: 0; opacity: 0.9; }
-          100% { height: 100%; opacity: 0.6; }
-        }
         @keyframes bloodDrop {
           0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
           70%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
@@ -153,76 +126,65 @@ function TerrorScreen() {
           100% { transform: translateY(100vh); }
         }
       `}</style>
-
-      {/* Skull rain canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
-
-      {/* Red lightning flash overlay */}
-      <div className="absolute inset-0 bg-red-600 pointer-events-none"
-        style={{ animation: "lightning 1.5s ease-in-out infinite", zIndex: 2 }} />
-
-      {/* Blood drips — left side */}
+      <div className="absolute inset-0 bg-red-600 pointer-events-none" style={{ animation: "lightning 1.5s ease-in-out infinite", zIndex: 2 }} />
       <div className="absolute left-0 top-0 w-8 h-full flex flex-col gap-0 pointer-events-none z-10">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="absolute top-0" style={{
-            left: `${i * 6 + 2}px`,
-            width: `${Math.random() * 6 + 4}px`,
+            left: `${i * 6 + 2}px`, width: `${Math.random() * 6 + 4}px`,
             background: "linear-gradient(to bottom, #8b0000, #cc0000)",
             borderRadius: "0 0 50% 50%",
-            animationName: "bloodDrop",
-            animationDuration: `${Math.random() * 2 + 1}s`,
-            animationDelay: `${Math.random() * 1}s`,
-            animationFillMode: "forwards",
-            animationTimingFunction: "ease-out",
-            height: `${Math.random() * 40 + 20}vh`,
+            animationName: "bloodDrop", animationDuration: `${Math.random() * 2 + 1}s`,
+            animationDelay: `${Math.random() * 1}s`, animationFillMode: "forwards",
+            animationTimingFunction: "ease-out", height: `${Math.random() * 40 + 20}vh`,
           }} />
         ))}
       </div>
-      {/* Blood drips — right side */}
       <div className="absolute right-0 top-0 w-8 h-full pointer-events-none z-10">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="absolute top-0" style={{
-            right: `${i * 6 + 2}px`,
-            width: `${Math.random() * 6 + 4}px`,
+            right: `${i * 6 + 2}px`, width: `${Math.random() * 6 + 4}px`,
             background: "linear-gradient(to bottom, #8b0000, #cc0000)",
             borderRadius: "0 0 50% 50%",
-            animationName: "bloodDrop",
-            animationDuration: `${Math.random() * 2 + 1}s`,
-            animationDelay: `${Math.random() * 1.5}s`,
-            animationFillMode: "forwards",
-            animationTimingFunction: "ease-out",
-            height: `${Math.random() * 40 + 20}vh`,
+            animationName: "bloodDrop", animationDuration: `${Math.random() * 2 + 1}s`,
+            animationDelay: `${Math.random() * 1.5}s`, animationFillMode: "forwards",
+            animationTimingFunction: "ease-out", height: `${Math.random() * 40 + 20}vh`,
           }} />
         ))}
       </div>
-
-      {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none px-4">
         <div className="text-7xl md:text-9xl mb-4" style={{ animation: "glitchText 0.3s infinite" }}>☠️</div>
-
         <h1 className="text-4xl md:text-7xl font-bold font-mono tracking-tighter text-red-600 mb-8"
           style={{ animation: "accessDeniedPulse 0.6s ease-in-out infinite" }}>
           ACCESS DENIED
         </h1>
-
         <div className="relative max-w-xl text-center">
           <p className="text-base md:text-xl font-mono text-red-400 leading-relaxed tracking-wide"
             style={{ animation: "glitchText 0.4s infinite" }}>
             Lol blocked. 😂 There is no place for you in hell, Start paving your way to heaven 🙏 You&apos;ve been blocked by Mr.black_a_n_o ☠️
           </p>
         </div>
-
-        <div className="mt-10 text-xs text-red-900 font-mono tracking-widest"
-          style={{ animation: "glitchText 0.5s infinite" }}>
+        <div className="mt-10 text-xs text-red-900 font-mono tracking-widest" style={{ animation: "glitchText 0.5s infinite" }}>
           YOUR DEVICE HAS BEEN LOGGED. SIGNATURE RECORDED.
         </div>
       </div>
-
-      {/* Scanline */}
       <div className="absolute left-0 right-0 h-1 bg-red-600/30 pointer-events-none z-30"
         style={{ animation: "scanDown 3s linear infinite" }} />
     </div>
   );
+}
+
+// Device-only fingerprint (does NOT include username so blocking works across name changes)
+function getDeviceFingerprint(): string {
+  const raw = [
+    navigator.userAgent,
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  ].join("|");
+  return btoa(raw).replace(/[^A-Z0-9]/gi, "").substring(0, 24).toUpperCase();
 }
 
 export default function LoginPage() {
@@ -236,16 +198,11 @@ export default function LoginPage() {
   const [adminPass, setAdminPass] = useState("");
 
   const [userUser, setUserUser] = useState("");
-  const [userPasskey, setUserPasskey] = useState("");
+  const [deviceFp, setDeviceFp] = useState("");
 
   useEffect(() => {
-    if (userUser.length >= 3) {
-      const fp = btoa(navigator.userAgent + userUser).substring(0, 16).toUpperCase();
-      setUserPasskey(`KEY-${fp}`);
-    } else {
-      setUserPasskey("");
-    }
-  }, [userUser]);
+    setDeviceFp(getDeviceFingerprint());
+  }, []);
 
   const handleLogin = async (role: "admin" | "user") => {
     try {
@@ -255,7 +212,7 @@ export default function LoginPage() {
           role,
           username,
           password: role === "admin" ? adminPass : undefined,
-          deviceFingerprint: role === "user" ? userPasskey : undefined,
+          deviceFingerprint: role === "user" ? deviceFp : undefined,
         }
       });
       login("dummy-token", res.role, res.username);
@@ -294,67 +251,46 @@ export default function LoginPage() {
           <TabsContent value="admin" className="space-y-4">
             <div>
               <label className="text-xs text-muted-foreground tracking-widest uppercase mb-1 block">IDENTIFIER</label>
-              <input
-                type="text"
-                value={adminUser}
-                onChange={e => setAdminUser(e.target.value)}
-                className="w-full bg-input/50 border border-border p-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              />
+              <input type="text" value={adminUser} onChange={e => setAdminUser(e.target.value)}
+                className="w-full bg-input/50 border border-border p-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
             </div>
             <div>
               <label className="text-xs text-muted-foreground tracking-widest uppercase mb-1 block">PASSPHRASE</label>
-              <input
-                type="password"
-                value={adminPass}
-                onChange={e => setAdminPass(e.target.value)}
+              <input type="password" value={adminPass} onChange={e => setAdminPass(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleLogin("admin")}
-                className="w-full bg-input/50 border border-border p-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              />
+                className="w-full bg-input/50 border border-border p-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
             </div>
-            <button
-              onClick={() => handleLogin("admin")}
-              disabled={loginMutation.isPending}
-              className="w-full bg-primary/10 border border-primary text-primary hover:bg-primary hover:text-primary-foreground p-4 font-bold tracking-widest uppercase transition-all shadow-[inset_0_0_10px_rgba(255,0,0,0.2)] hover:shadow-[0_0_15px_rgba(255,0,0,0.5)] mt-4"
-            >
+            <button onClick={() => handleLogin("admin")} disabled={loginMutation.isPending}
+              className="w-full bg-primary/10 border border-primary text-primary hover:bg-primary hover:text-primary-foreground p-4 font-bold tracking-widest uppercase transition-all shadow-[inset_0_0_10px_rgba(255,0,0,0.2)] hover:shadow-[0_0_15px_rgba(255,0,0,0.5)] mt-4">
               {loginMutation.isPending ? "AUTHENTICATING..." : "BREACH SYSTEM"}
             </button>
           </TabsContent>
 
           <TabsContent value="user" className="space-y-4">
             <div>
-              <label className="text-xs text-muted-foreground tracking-widest uppercase mb-1 block">ALIAS (MIN 3 CHARS, LETTERS ONLY)</label>
-              <input
-                type="text"
-                value={userUser}
+              <label className="text-xs text-muted-foreground tracking-widest uppercase mb-1 block">YOUR NAME</label>
+              <input type="text" value={userUser}
                 onChange={e => setUserUser(e.target.value.replace(/[^a-zA-Z]/g, ""))}
                 className="w-full bg-input/50 border border-border p-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                placeholder="Enter Alias..."
-              />
+                placeholder="Enter your name..." />
             </div>
 
             {userUser.length >= 3 && (
               <div className="bg-black/50 border border-accent p-4 relative corner-brackets">
-                <label className="text-[10px] text-accent tracking-widest uppercase mb-2 block">GENERATED PASSKEY</label>
+                <label className="text-[10px] text-accent tracking-widest uppercase mb-2 block">DEVICE PASSKEY</label>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-accent font-bold truncate text-sm">{userPasskey}</span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(userPasskey);
-                      toast({ title: "COPIED TO CLIPBOARD" });
-                    }}
-                    className="p-2 text-accent hover:bg-accent/20 rounded-none transition-colors flex-shrink-0"
-                  >
+                  <span className="text-accent font-bold truncate text-sm">{deviceFp}</span>
+                  <button onClick={() => { navigator.clipboard.writeText(deviceFp); toast({ title: "COPIED TO CLIPBOARD" }); }}
+                    className="p-2 text-accent hover:bg-accent/20 rounded-none transition-colors flex-shrink-0">
                     <Copy size={16} />
                   </button>
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Unique to your device</p>
               </div>
             )}
 
-            <button
-              onClick={() => handleLogin("user")}
-              disabled={loginMutation.isPending || userUser.length < 3}
-              className="w-full bg-primary/10 border border-primary text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed p-4 font-bold tracking-widest uppercase transition-all shadow-[inset_0_0_10px_rgba(255,0,0,0.2)] hover:shadow-[0_0_15px_rgba(255,0,0,0.5)] mt-4"
-            >
+            <button onClick={() => handleLogin("user")} disabled={loginMutation.isPending || userUser.length < 3}
+              className="w-full bg-primary/10 border border-primary text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed p-4 font-bold tracking-widest uppercase transition-all shadow-[inset_0_0_10px_rgba(255,0,0,0.2)] hover:shadow-[0_0_15px_rgba(255,0,0,0.5)] mt-4">
               {loginMutation.isPending ? "AUTHENTICATING..." : "REQUEST ACCESS"}
             </button>
           </TabsContent>

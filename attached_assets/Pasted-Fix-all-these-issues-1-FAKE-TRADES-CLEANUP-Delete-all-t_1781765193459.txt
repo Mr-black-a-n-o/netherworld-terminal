@@ -1,0 +1,67 @@
+Fix all these issues:
+
+1. FAKE TRADES CLEANUP:
+- Delete all trades from database where entry price is 100.000000
+- Remove unknown coins (BYCUSDT, VELVETUSDT, NOTUSDT, XAUUSDT) from trades and signals
+- Keep only: BTCUSDT, ETHUSDT, BNBUSDT, SOLUSDT, EURUSD, GBPUSD, USDJPY
+
+2. TARGET LOCKED PANEL:
+- Show latest active signal details (coin, BUY/SELL, entry, TP, SL, strength)
+- If no signal, show "NO ACTIVE SIGNAL" instead of "WAITING FOR SIGNAL INTELLIGENCE"
+
+3. TOTAL SIGNALS COUNT:
+- Fix signal count showing 0 - show correct real number
+
+4. USER LOGIN:
+- Change "ALIAS (MIN 3 CHARS, LETTERS ONLY)" label to "YOUR NAME"
+- Device fingerprint blocking: when admin blocks a user, block their device fingerprint
+- Even if blocked user enters different name, same device cannot login
+- Show terror screen for blocked devices regardless of name
+- Admin unblock removes device block too
+
+5. PROFILE PAGE:
+- Make profile more beautiful with dark aura glow card design
+- Social links: individual fields with icons for Instagram, TikTok, Telegram, WhatsApp
+- Each field shows platform icon + @username placeholder
+- Show clickable social icons after save
+- Users can see and click all social links
+
+6. PROFILE PHOTO FIX:
+- Fix HTTP 413 error when uploading profile photo
+- Increase payload limit properly so base64 photo saves correctly
+
+7. AUTO SIGNAL BROADCAST:
+- Every 15 minutes auto scan all assets
+- Send ELITE signals (4-5 strength) to Telegram automatically
+- Format:
+  ⚡ AUTO SIGNAL — BTCUSDT
+  ━━━━━━━━━━━━━━━
+  📈 BUY
+  💰 Entry: 67,000
+  🎯 TP: 69,000
+  🛑 SL: 65,000
+  ⚡ Strength: STRONG 4/5
+  ✅ EMA200: Pass
+  ✅ RSI: Pass
+  ✅ Volume: Pass
+  ✅ S/R Zone: Pass
+  ❌ Momentum: Fail
+  ━━━━━━━━━━━━━━━
+  🕐 Entry Time: 14:30
+  📊 Timeframe: 1h
+
+8. REAL SIGNAL ENGINE FIX:
+- Fetch real OHLCV candle data from Binance API for each coin
+- Calculate EMA200 using last 200 candles real data
+- Calculate RSI using last 14 candles real data
+- Check real volume spike vs 20 bar average
+- Calculate real Support/Resistance from recent highs/lows
+- BUY signal only when price above EMA200 + RSI oversold + volume spike
+- SELL signal only when price below EMA200 + RSI overbought + volume spike
+- Entry price = current real Binance price
+- TP = entry + 2% for BUY, entry - 2% for SELL
+- SL = entry - 1% for BUY, entry + 1% for SELL
+- No fake or random signals - only real technical analysis
+- Generate signal for ANY coin/timeframe user requests
+- Show strength: 1/5 🔴 VERY WEAK to 5/5 ⚡ ELITE
+- Show which conditions passed and failed
