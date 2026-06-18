@@ -74,16 +74,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     : [...navItems.slice(0, 4), { href: "/profile", label: "Profile", icon: UserIcon }];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden font-mono">
+    <div className="min-h-screen bg-transparent text-foreground flex flex-col md:flex-row overflow-hidden font-mono">
       {/* Top Gradient Line */}
       <div className="h-0.5 w-full absolute top-0 left-0 z-50 animate-gradient-flow" />
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-56 lg:w-64 border-r border-border bg-card shadow-[0_0_15px_rgba(0,0,0,0.5)] z-40 flex-shrink-0">
+      <aside className="hidden md:flex flex-col w-56 lg:w-64 border-r border-border bg-card/50 backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)] z-40 flex-shrink-0">
         <div className="p-4 lg:p-6 border-b border-border">
           <h1 className="text-lg lg:text-xl font-bold text-primary animate-glow-pulse tracking-tight">NETHERWORLD</h1>
           <h2 className="text-xs text-accent tracking-widest mt-0.5">TERMINAL ⚡</h2>
           <InstallButton className="mt-3 w-full justify-center" />
+          
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
@@ -117,7 +118,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <span>Logout</span>
           </button>
           <div className="mt-3 text-[10px] text-center text-muted-foreground tracking-widest leading-relaxed">
-            ☠️ Powered by Mr.black_a_n_o
           </div>
         </div>
       </aside>
@@ -129,7 +129,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <p className="text-[10px] text-accent tracking-widest">TERMINAL ⚡</p>
         </div>
         <div className="flex items-center gap-2">
-          <InstallButton />
+          <InstallButton className="mt-3 w-full justify-center" />
           <button
             onClick={logout}
             className="p-2 text-destructive border border-destructive/40 hover:bg-destructive/10 transition-colors"
@@ -148,14 +148,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
 
-        <footer className="py-3 border-t border-border/50 text-center text-[10px] text-muted-foreground tracking-widest bg-background/80 backdrop-blur-sm z-20 hidden md:block">
-          ☠️ Powered by Mr.black_a_n_o — ham_evil_bot netherworld edition ☠️
+        <footer className="py-3 border-t border-border/50 text-center text-[10px] text-muted-foreground tracking-widest bg-background/30 backdrop-blur-sm z-20 hidden md:block">
+          ☠️ Powered by  — ham_evil_bot netherworld edition ☠️
         </footer>
       </main>
 
       {/* Mobile Bottom Navigation */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm z-40"
+        className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card z-40"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex justify-around">
@@ -180,10 +180,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      {/* Watermark */}
-      <div className="fixed bottom-10 right-10 text-[10vw] font-bold text-white/[0.02] pointer-events-none select-none -rotate-12 z-0 tracking-tighter whitespace-nowrap hidden md:block">
-        Mr.black_a_n_o
-      </div>
+      
     </div>
   );
 }
+

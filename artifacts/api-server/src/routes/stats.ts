@@ -17,7 +17,7 @@ router.get("/stats/today", async (req, res): Promise<void> => {
     .from(tradesTable)
     .where(and(eq(tradesTable.isActive, false), gte(tradesTable.entryTime, today)));
 
-  const tp = closedTrades.filter(t => t.closeReason === "tp").length;
+  const tp = closedTrades.filter(t => t.closeReason === "tp" || (t.closeReason === "manual" && (t.pnlPercent || 0) > 0)).length;
   const sl = closedTrades.filter(t => t.closeReason === "sl").length;
   const manual = closedTrades.filter(t => t.closeReason === "manual").length;
   const total = closedTrades.length;

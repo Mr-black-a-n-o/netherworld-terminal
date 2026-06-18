@@ -59,6 +59,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    hmr: { overlay: false },
     port,
     strictPort: true,
     host: "0.0.0.0",
