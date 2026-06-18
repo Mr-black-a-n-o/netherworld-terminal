@@ -5,6 +5,17 @@ import { db, signalsTable, tradesTable, assetsTable, usersTable } from "@workspa
 import { eq, and, desc } from "drizzle-orm";
 import { fetchPrice } from "./market";
 
+function fmtPrice(n: number): string {
+  if (n >= 1) return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toFixed(6);
+}
+
+function fmtDuration(ms: number): string {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 let bot: TelegramBot | null = null;
 const ADMIN_USERNAME = "hamdhan";
 
@@ -33,9 +44,18 @@ export function initTelegramBot(): void {
           await handleProfit(chatId);
           return;
         }
+        // /die alone → close ALL trades | /die SYMBOL → close one
+        if (text === "/die") {
+          await handleDieAll(chatId);
+          return;
+        }
         if (text.startsWith("/die ")) {
           const symbol = text.split(" ")[1]?.toUpperCase();
           if (symbol) await handleDie(chatId, symbol);
+          return;
+        }
+        if (text === "/go") {
+          await handleGo(chatId);
           return;
         }
         if (text === "/stats") {
@@ -48,7 +68,18 @@ export function initTelegramBot(): void {
         }
         if (text === "/start" || text === "/help") {
           await bot!.sendMessage(chatId,
-            '☠️ NETHERWORLD TERMINAL — ham_evil_bot\n\nSend me a symbol + timeframe to get a signal:\nExamples: BTCUSDT 1h or EURUSD 4h\n\nSupported timeframes: 1m 5m 15m 30m 1h 4h 12h 1d\n\nAdmin Commands:\n/profit or /p — Active trades P/L\n/die SYMBOL — Force close a trade\n/stats — Todays scorecard\n/portfolio — Active positions\n\nPowered by Mr.black_a_n_o ☠️',
+            '☠️ NETHERWORLD TERMINAL — ham_evil_bot\n\n' +
+            'Send me a symbol + timeframe to get a signal:\n' +
+            'Examples: BTCUSDT 1h or EURUSD 4h\n\n' +
+            'Supported timeframes: 1m 5m 15m 30m 1h 4h 12h 1d\n\n' +
+            'Admin Commands:\n' +
+            '/go — Scan ALL assets now & send signals\n' +
+            '/profit or /p — Active trades P/L\n' +
+            '/die — Force close ALL active trades\n' +
+            '/die SYMBOL — Force close one trade\n' +
+            '/stats — Today\'s scorecard\n' +
+            '/portfolio — Active positions\n\n' +
+            'Powered by Mr.black_a_n_o ☠️',
             { parse_mode: undefined }
           );
           return;
@@ -262,6 +293,177 @@ async function handleDie(chatId: number, symbol: string): Promise<void> {
     `Trade unlocked ✅`;
 
   await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+}
+
+// /go — analyze ALL active assets and send a signal for each one
+async function handleGo(chatId: number): Promise<void> {
+  if (!bot) return;
+
+  const assets = await db
+    .select()
+    .from(assetsTable)
+    .where(eq(assetsTable.isActive, true));
+
+  if (assets.length === 0) {
+    await bot.sendMessage(chatId, "⚠️ No active assets configured.");
+    return;
+  }
+
+  await bot.sendMessage(chatId, `⚡ Scanning ${assets.length} assets... stand by ☠️`);
+
+  const STRENGTH_LABELS: Record<number, string> = {
+    1: "VERY WEAK", 2: "WEAK", 3: "MODERATE", 4: "STRONG", 5: "ELITE",
+  };
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const asset of assets) {
+    try {
+      // Skip if trade already open
+      const [existing] = await db
+        .select()
+        .from(tradesTable)
+        .where(and(eq(tradesTable.symbol, asset.symbol), eq(tradesTable.isActive, true)))
+        .limit(1);
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      const analysis = await analyzeAsset(asset.symbol, "1h");
+      const dirEmoji = analysis.direction === "BUY" ? "📈" : "📉";
+      const strengthLabel = STRENGTH_LABELS[analysis.strength] || "MODERATE";
+      const c = analysis.conditions;
+
+      const msg =
+        `⚡ SIGNAL — ${asset.symbol}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `${dirEmoji} ${analysis.direction}\n` +
+        `💰 Entry: ${fmtPrice(analysis.entryPrice)}\n` +
+        `🎯 TP: ${fmtPrice(analysis.takeProfit)}\n` +
+        `🛑 SL: ${fmtPrice(analysis.stopLoss)}\n` +
+        `⚡ Strength: ${strengthLabel} ${analysis.strength}/5\n` +
+        `${c.ema200 ? "✅" : "❌"} EMA200: ${c.ema200 ? "Pass" : "Fail"}\n` +
+        `${c.rsiDivergence ? "✅" : "❌"} RSI: ${c.rsiDivergence ? "Pass" : "Fail"}\n` +
+        `${c.volumeSpike ? "✅" : "❌"} Volume: ${c.volumeSpike ? "Pass" : "Fail"}\n` +
+        `${c.supportResistance ? "✅" : "❌"} S/R Zone: ${c.supportResistance ? "Pass" : "Fail"}\n` +
+        `${c.momentum ? "✅" : "❌"} Momentum: ${c.momentum ? "Pass" : "Fail"}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `📊 Timeframe: 1h`;
+
+      await bot.sendMessage(chatId, msg);
+
+      // Save signal + trade to DB
+      const [signal] = await db.insert(signalsTable).values({
+        symbol: asset.symbol,
+        timeframe: "1h",
+        direction: analysis.direction,
+        strength: analysis.strength,
+        entryPrice: analysis.entryPrice,
+        stopLoss: analysis.stopLoss,
+        takeProfit: analysis.takeProfit,
+        conditionEma200: analysis.conditions.ema200,
+        conditionRsiDivergence: analysis.conditions.rsiDivergence,
+        conditionVolumeSpike: analysis.conditions.volumeSpike,
+        conditionSupportResistance: analysis.conditions.supportResistance,
+        conditionMomentum: analysis.conditions.momentum,
+        status: "active",
+      }).returning();
+
+      await db.insert(tradesTable).values({
+        signalId: signal.id,
+        symbol: asset.symbol,
+        direction: analysis.direction,
+        entryPrice: analysis.entryPrice,
+        stopLoss: analysis.stopLoss,
+        takeProfit: analysis.takeProfit,
+        currentPrice: analysis.entryPrice,
+        pnlPercent: 0,
+        pnlAmount: 0,
+        isActive: true,
+      });
+
+      sent++;
+    } catch (err) {
+      logger.error({ err, symbol: asset.symbol }, "/go analysis error");
+      await bot.sendMessage(chatId, `⚠️ ${asset.symbol}: failed to analyze`);
+    }
+  }
+
+  await bot.sendMessage(
+    chatId,
+    `✅ /go complete — ${sent} signal(s) sent, ${skipped} skipped (trade already open)`
+  );
+}
+
+// /die (no args) — force close ALL active trades at once
+async function handleDieAll(chatId: number): Promise<void> {
+  if (!bot) return;
+
+  const activeTrades = await db
+    .select()
+    .from(tradesTable)
+    .where(eq(tradesTable.isActive, true));
+
+  if (activeTrades.length === 0) {
+    await bot.sendMessage(chatId, "📭 No active trades to close.");
+    return;
+  }
+
+  const now = new Date();
+  let totalPnlAmt = 0;
+  let totalPnlPct = 0;
+  const lines: string[] = [];
+
+  for (const trade of activeTrades) {
+    try {
+      const priceData = await fetchPrice(trade.symbol);
+      const exitPrice = priceData.price;
+      const pnlPct = trade.direction === "BUY"
+        ? ((exitPrice - trade.entryPrice) / trade.entryPrice) * 100
+        : ((trade.entryPrice - exitPrice) / trade.entryPrice) * 100;
+      const pnlAmt = pnlPct * 100;
+
+      await db.update(tradesTable).set({
+        isActive: false,
+        currentPrice: exitPrice,
+        pnlPercent: pnlPct,
+        pnlAmount: pnlAmt,
+        closedAt: now,
+        closeReason: "manual",
+        exitPrice,
+      }).where(eq(tradesTable.id, trade.id));
+
+      await db.update(signalsTable).set({ status: "closed_manual" })
+        .where(eq(signalsTable.id, trade.signalId));
+
+      totalPnlAmt += pnlAmt;
+      totalPnlPct += pnlPct;
+
+      const sign = pnlPct >= 0 ? "+" : "";
+      const amtSign = pnlAmt >= 0 ? "+" : "";
+      lines.push(`🪙 ${trade.symbol} ${trade.direction}: ${sign}${pnlPct.toFixed(2)}% | ${amtSign}$${Math.abs(pnlAmt).toFixed(0)}`);
+    } catch (err) {
+      logger.error({ err, tradeId: trade.id }, "/die all — error closing trade");
+      lines.push(`⚠️ ${trade.symbol}: failed to close`);
+    }
+  }
+
+  const totalSign = totalPnlAmt >= 0 ? "+" : "";
+  const avgPct = activeTrades.length > 0 ? totalPnlPct / activeTrades.length : 0;
+  const avgSign = avgPct >= 0 ? "+" : "";
+
+  const msg =
+    `💀 ALL TRADES FORCE CLOSED\n` +
+    `━━━━━━━━━━━━━━━\n` +
+    lines.join("\n") + "\n" +
+    `━━━━━━━━━━━━━━━\n` +
+    `💰 TOTAL: ${totalSign}$${Math.abs(totalPnlAmt).toFixed(0)} | ${avgSign}${avgPct.toFixed(2)}%\n` +
+    `All trades unlocked ✅`;
+
+  await bot.sendMessage(chatId, msg);
 }
 
 async function handleStats(chatId: number): Promise<void> {
