@@ -103,10 +103,22 @@ router.post("/auth/logout", (req, res): void => {
   });
 });
 
-router.get("/auth/me", (req, res): void => {
+router.get("/auth/me", async (req, res): Promise<void> => {
   if (!req.session.role) {
     res.status(401).json({ error: "Not authenticated" });
     return;
+  }
+  if (req.session.role === "user") {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.username, req.session.username!))
+      .limit(1);
+    if (!user || user.isBlocked) {
+      req.session.destroy(() => {});
+      res.status(403).json({ error: "BLOCKED", message: "Access denied — you have been blocked" });
+      return;
+    }
   }
   res.json({
     authenticated: true,

@@ -21,8 +21,8 @@ function getStrengthBadge(strength: number) {
 }
 
 export default function Dashboard() {
-  const { data: stats } = useGetTodayStats({ query: { refetchInterval: 30000 } });
-  const { data: trades } = useListTrades({ query: { refetchInterval: 15000 } });
+  const { data: stats } = useGetTodayStats({ query: { refetchInterval: 30000, queryKey: ["today-stats"] } });
+  const { data: trades } = useListTrades({ query: { refetchInterval: 15000, queryKey: ["trades"] } });
   const { data: signals } = useListSignals({ query: { refetchInterval: 15000 } });
 
   const activeTrades = trades?.filter(t => t.isActive) ?? [];

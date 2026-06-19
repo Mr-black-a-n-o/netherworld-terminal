@@ -110,6 +110,26 @@ export function initTelegramBot(): void {
       logger.error({ err }, "Telegram polling error");
     });
 
+    // Auto signal every 15 minutes
+    setInterval(async () => {
+      try {
+        await handleGo(ADMIN_CHAT_ID);
+      } catch (err) {
+        logger.error({ err }, "Auto signal error");
+      }
+    }, 15 * 60 * 1000);
+
+    // TP/SL monitor every 2 minutes
+    setInterval(async () => {
+      try {
+        await monitorTrades();
+      } catch (err) {
+        logger.error({ err }, "Trade monitor error");
+      }
+    }, 2 * 60 * 1000);
+
+    logger.info("Auto signal + TP/SL monitor started");
+
   } catch (err) {
     logger.error({ err }, "Failed to initialize Telegram bot");
   }
@@ -346,6 +366,13 @@ async function handleGo(chatId: number): Promise<void> {
       }
 
       const analysis = await analyzeAsset(asset.symbol, "1h");
+
+      // Skip weak signals (less than 2 conditions pass)
+      if (analysis.strength < 2) {
+        skipped++;
+        continue;
+      }
+
       const dirEmoji = analysis.direction === "BUY" ? "📈" : "📉";
       const strengthLabel = STRENGTH_LABELS[analysis.strength] || "MODERATE";
       const c = analysis.conditions;
@@ -516,6 +543,78 @@ async function handleStats(chatId: number): Promise<void> {
     `_☠️ ham_evil_bot — netherworld edition_`;
 
   await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+}
+
+// TP/SL monitor
+async function monitorTrades(): Promise<void> {
+  const activeTrades = await db
+    .select()
+    .from(tradesTable)
+    .where(eq(tradesTable.isActive, true));
+
+  if (activeTrades.length === 0) return;
+
+  const now = new Date();
+
+  for (const trade of activeTrades) {
+    try {
+      const priceData = await fetchPrice(trade.symbol);
+      const currentPrice = priceData.price;
+
+      const tpHit = trade.direction === "BUY"
+        ? currentPrice >= trade.takeProfit
+        : currentPrice <= trade.takeProfit;
+
+      const slHit = trade.direction === "BUY"
+        ? currentPrice <= trade.stopLoss
+        : currentPrice >= trade.stopLoss;
+
+      if (!tpHit && !slHit) continue;
+
+      const reason = tpHit ? "tp" : "sl";
+      const pnlPct = trade.direction === "BUY"
+        ? ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100
+        : ((trade.entryPrice - currentPrice) / trade.entryPrice) * 100;
+      const pnlAmt = pnlPct * 100;
+
+      await db.update(tradesTable).set({
+        isActive: false,
+        currentPrice,
+        pnlPercent: pnlPct,
+        pnlAmount: pnlAmt,
+        closedAt: now,
+        closeReason: reason,
+        exitPrice: currentPrice,
+      }).where(eq(tradesTable.id, trade.id));
+
+      await db.update(signalsTable).set({
+        status: reason === "tp" ? "closed_tp" : "closed_sl",
+      }).where(eq(signalsTable.id, trade.signalId));
+
+      const emoji = tpHit ? "✅" : "❌";
+      const msg =
+        `${emoji} *TRADE ${tpHit ? "TAKE PROFIT HIT" : "STOP LOSS HIT"}*
+` +
+        `━━━━━━━━━━━━━━━
+` +
+        `🪙 ${trade.symbol} - ${trade.direction}
+` +
+        `Entry: ${trade.entryPrice.toFixed(6)}
+` +
+        `Exit: ${currentPrice.toFixed(6)}
+` +
+        `Result: ${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}% | ${pnlAmt >= 0 ? "+" : ""}$${Math.abs(pnlAmt).toFixed(0)}
+` +
+        `━━━━━━━━━━━━━━━
+` +
+        `${tpHit ? "Coin unlocked for next signal ✅" : "Trade closed to protect capital 🛡️"}`;
+
+      if (bot) await bot.sendMessage(ADMIN_CHAT_ID, msg, { parse_mode: "Markdown" });
+
+    } catch (err) {
+      logger.error({ err, tradeId: trade.id }, "Error monitoring trade");
+    }
+  }
 }
 
 // Hardcoded admin chat ID — all auto alerts and broadcasts go here

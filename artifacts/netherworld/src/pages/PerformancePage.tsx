@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function PerformancePage() {
   const { data: stats } = useGetTodayStats();
   const { data: portfolio } = useGetPortfolio();
-  const { data: history } = useGetSignalHistory({ query: { limit: 50 } });
+  const { data: history } = useGetSignalHistory({ limit: 50 });
 
   const pieData = stats ? [
     { name: 'Wins (TP)', value: stats.tpHits, color: 'hsl(var(--primary))' },

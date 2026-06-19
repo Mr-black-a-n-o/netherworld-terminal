@@ -79,7 +79,7 @@ function speakWelcome() {
       v.name.includes("Moira") ||
       v.name.includes("Tessa") ||
       v.name.includes("Fiona") ||
-      (v.gender && v.gender === "female")
+      ((v as any).gender && (v as any).gender === "female")
     );
     if (female) utter.voice = female;
     window.speechSynthesis.speak(utter);

@@ -242,7 +242,7 @@ export default function LoginPage() {
           <p className="text-accent text-sm tracking-[0.2em]">TERMINAL ACCESS</p>
         </div>
 
-        <Tabs defaultValue="admin" className="p-6">
+        <Tabs defaultValue="user" className="p-6">
           <TabsList className="w-full grid grid-cols-2 mb-6 bg-black/50 border border-border/50">
             <TabsTrigger value="admin" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary">ADMIN</TabsTrigger>
             <TabsTrigger value="user" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary">USER</TabsTrigger>

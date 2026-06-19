@@ -8,8 +8,7 @@ export default function SignalsPage() {
   const [analyzeTimeframe, setAnalyzeTimeframe] = useState("1h");
 
   const { data: signals, refetch } = useListSignals({
-    query: { refetchInterval: 30000 }
-  });
+    });
 
   const analyzeMutation = useAnalyzeSignal();
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useGetMe, useLogout } from "@workspace/api-client-react";
+import { useLogout } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,31 +18,54 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<string | null>(localStorage.getItem("netherworld_role"));
   const [username, setUsername] = useState<string | null>(localStorage.getItem("netherworld_username"));
+  const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  const { data: sessionInfo, isLoading, error } = useGetMe({
-    query: {
-      retry: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    }
-  });
-
   const logoutMutation = useLogout();
 
-  useEffect(() => {
-    if (sessionInfo) {
-      setRole(sessionInfo.role);
-      setUsername(sessionInfo.username);
-      localStorage.setItem("netherworld_role", sessionInfo.role);
-      localStorage.setItem("netherworld_username", sessionInfo.username);
-    } else if (error) {
-      setRole(null);
-      setUsername(null);
-      localStorage.removeItem("netherworld_role");
-      localStorage.removeItem("netherworld_username");
+  const checkSession = async () => {
+    if (localStorage.getItem("netherworld_role") !== "user") return;
+    try {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (res.status === 403) {
+        setRole(null);
+        setUsername(null);
+        localStorage.removeItem("netherworld_role");
+        localStorage.removeItem("netherworld_username");
+        setLocation("/login?blocked=1");
+      }
+    } catch (e) {
+      console.error("Session check error:", e);
     }
-  }, [sessionInfo, error]);
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setRole(data.role);
+          setUsername(data.username);
+          localStorage.setItem("netherworld_role", data.role);
+          localStorage.setItem("netherworld_username", data.username);
+        } else {
+          setRole(null);
+          setUsername(null);
+          localStorage.removeItem("netherworld_role");
+          localStorage.removeItem("netherworld_username");
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    init();
+
+    const interval = setInterval(checkSession, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = (token: string, newRole: string, newUsername: string) => {
     setRole(newRole);

@@ -34,12 +34,8 @@ function ProtectedRoute({
       }
     }
   }, [isLoading, isAuthenticated, isAdmin, adminOnly, setLocation]);
-  if (isLoading || !isAuthenticated)
-    return (
-      <div className="h-screen w-full bg-background flex items-center justify-center text-primary font-mono animate-blink text-2xl tracking-widest">
-        INITIALIZING...
-      </div>
-    );
+  if (isLoading && !localStorage.getItem("netherworld_role")) return null;
+  if (!isAuthenticated && !isLoading) return null;
   if (adminOnly && !isAdmin) return null;
   return (
     <AppLayout>
@@ -113,7 +109,7 @@ function App() {
           muted
           loop
           playsInline
-          src="/video.mp4"
+          src="https://res.cloudinary.com/dcn6gr6yl/video/upload/v1781856735/copy_76739CAD-603F-4B7D-BBA7-2E0EB843CC7E_iwzd2t.mp4"
           onStalled={(e) => {
             const v = e.target as HTMLVideoElement;
             v.play();
