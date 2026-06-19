@@ -18,7 +18,6 @@ export interface Candle {
   volume: number;
 }
 
-// Map forex symbols to Yahoo Finance format
 function toYahooSymbol(symbol: string): string {
   const s = symbol.toUpperCase();
   if (
@@ -35,7 +34,6 @@ function toYahooSymbol(symbol: string): string {
   return s;
 }
 
-// Intha function-la thaan ella crypto asset-aiyum add panniyirukkom
 function isCrypto(symbol: string): boolean {
   const s = symbol.toUpperCase();
   return (
@@ -44,17 +42,10 @@ function isCrypto(symbol: string): boolean {
     s.endsWith("ETH") ||
     s.endsWith("BUSD") ||
     s.includes("VELVET") ||
-    s.includes("NOT") ||
-    s.includes("SOL") ||
-    s.includes("XRP") ||
-    s.includes("AVAX") ||
-    s.includes("ADA") ||
-    s.includes("LINK") ||
-    s.includes("DOT")
+    s.includes("NOT")
   );
 }
 
-// Binance timeframe map
 const BINANCE_TF: Record<string, string> = {
   "1m": "1m",
   "5m": "5m",
@@ -64,26 +55,6 @@ const BINANCE_TF: Record<string, string> = {
   "4h": "4h",
   "12h": "12h",
   "1d": "1d",
-};
-
-// Global Fallback Prices - Ingae ungaluku thaevayana extra assets-ai eziya add pannalam
-const FALLBACK_PRICES: Record<string, number> = {
-  BTCUSDT: 67000,
-  ETHUSDT: 3500,
-  BNBUSDT: 580,
-  SOLUSDT: 165,
-  XRPUSDT: 0.52,
-  AVAXUSDT: 35.0,
-  ADAUSDT: 0.45,
-  LINKUSDT: 15.2,
-  DOTUSDT: 6.5,
-  XAUUSDT: 2350, // Gold
-  VELVETUSDT: 1.2,
-  NOTUSDT: 0.015,
-  EURUSD: 1.085,
-  GBPUSD: 1.265,
-  USDJPY: 149.5,
-  AUDUSD: 0.665,
 };
 
 export async function fetchPrice(symbol: string): Promise<PriceData> {
@@ -97,13 +68,12 @@ export async function fetchPrice(symbol: string): Promise<PriceData> {
       const d = resp.data;
       return {
         symbol: sym,
-        price: parseFloat(d.lastPrice) || FALLBACK_PRICES[sym] || 1.0,
-        change24h: parseFloat(d.priceChangePercent) || 0,
-        high24h: parseFloat(d.highPrice) || parseFloat(d.lastPrice) * 1.01,
-        low24h: parseFloat(d.lowPrice) || parseFloat(d.lastPrice) * 0.99,
+        price: parseFloat(d.lastPrice),
+        change24h: parseFloat(d.priceChangePercent),
+        high24h: parseFloat(d.highPrice),
+        low24h: parseFloat(d.lowPrice),
       };
     } else {
-      // Forex via open.er-api
       const base = sym.slice(0, 3);
       const quote = sym.slice(3, 6);
       const resp = await axios.get(
@@ -121,12 +91,20 @@ export async function fetchPrice(symbol: string): Promise<PriceData> {
       };
     }
   } catch (err) {
-    logger.warn(
-      { symbol: sym, err },
-      "Failed to fetch price, using fallback safely",
-    );
-    // Dynamic price allocation to ensure 0% crash rate
-    const price = FALLBACK_PRICES[sym] || 1.0;
+    logger.warn({ symbol: sym, err }, "Failed to fetch price, using fallback");
+    const fallbackPrices: Record<string, number> = {
+      BTCUSDT: 67000,
+      ETHUSDT: 3500,
+      BNBUSDT: 580,
+      SOLUSDT: 165,
+      XAUUSDT: 2350,
+      VELVETUSDT: 1.2,
+      NOTUSDT: 0.015,
+      EURUSD: 1.085,
+      GBPUSD: 1.265,
+      USDJPY: 149.5,
+    };
+    const price = fallbackPrices[sym] || 1.0;
     return {
       symbol: sym,
       price,
@@ -159,7 +137,6 @@ export async function fetchCandles(
         volume: parseFloat(String(k[5])),
       }));
     } else {
-      // Yahoo Finance candles for forex
       const yahooSym = toYahooSymbol(sym);
       const yahooInterval: Record<string, string> = {
         "1m": "1m",
@@ -195,11 +172,14 @@ export async function fetchCandles(
   } catch (err) {
     logger.warn(
       { symbol: sym, timeframe, err },
-      "Failed to fetch candles, generating mock safely",
+      "Failed to fetch candles, generating mock",
     );
-
-    // Safety Net: Safe mock generation without network call loop
-    const basePrice = FALLBACK_PRICES[sym] || 1.0;
+    let basePrice = 1.0;
+    try {
+      basePrice = (await fetchPrice(sym)).price;
+    } catch (pErr) {
+      basePrice = 1.0;
+    }
     const candles: Candle[] = [];
     let price = basePrice * 0.95;
     for (let i = 0; i < limit; i++) {
