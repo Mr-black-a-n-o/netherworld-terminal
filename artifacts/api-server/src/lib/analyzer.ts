@@ -65,6 +65,8 @@ function calcMACD(closes: number[]): { macd: number; signal: number } {
 
 const VALID_SYMBOLS = new Set([
   "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT",
+  "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT",
+  "DOTUSDT", "MATICUSDT", "LINKUSDT", "LTCUSDT",
   "EURUSD", "GBPUSD", "USDJPY",
 ]);
 
