@@ -93,10 +93,10 @@ export async function fetchPrice(symbol: string): Promise<PriceData> {
   } catch (err) {
     logger.warn({ symbol: sym, err }, "Failed to fetch price, using fallback");
     const fallbackPrices: Record<string, number> = {
-      BTCUSDT: 67000,
-      ETHUSDT: 3500,
-      BNBUSDT: 580,
-      SOLUSDT: 165,
+      BTCUSDT: 63000,
+      ETHUSDT: 1730,
+      BNBUSDT: 585,
+      SOLUSDT: 71,
       XAUUSDT: 2350,
       VELVETUSDT: 1.2,
       NOTUSDT: 0.015,
