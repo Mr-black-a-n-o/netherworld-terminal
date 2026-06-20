@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { monitorTrades } from "./telegram";
 import { logger } from "./logger";
 import { db, signalsTable, tradesTable, assetsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -39,6 +40,14 @@ const STRENGTH_LABELS: Record<number, string> = {
 };
 
 export function initScheduler(): void {
+  cron.schedule("*/2 * * * *", async () => {
+    try {
+      await monitorTrades();
+    } catch (err) {
+      console.error("Monitor error:", err);
+    }
+  });
+
   cron.schedule("*/15 * * * *", async () => {
     logger.info("Scheduler: running 15-minute scan");
     await checkActiveTrades();

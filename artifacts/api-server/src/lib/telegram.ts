@@ -548,7 +548,7 @@ async function handleStats(chatId: number): Promise<void> {
 }
 
 // TP/SL monitor
-async function monitorTrades(): Promise<void> {
+export async function monitorTrades(): Promise<void> {
   const activeTrades = await db
     .select()
     .from(tradesTable)
