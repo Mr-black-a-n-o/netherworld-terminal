@@ -571,6 +571,16 @@ async function monitorTrades(): Promise<void> {
         ? currentPrice <= trade.stopLoss
         : currentPrice >= trade.stopLoss;
 
+      // Update live PnL for active trade
+      const livePnlPct = trade.direction === "BUY"
+        ? ((currentPrice - trade.entryPrice) / trade.entryPrice) * 100
+        : ((trade.entryPrice - currentPrice) / trade.entryPrice) * 100;
+      await db.update(tradesTable).set({
+        currentPrice,
+        pnlPercent: livePnlPct,
+        pnlAmount: livePnlPct * 100,
+      }).where(eq(tradesTable.id, trade.id));
+
       if (!tpHit && !slHit) continue;
 
       const reason = tpHit ? "tp" : "sl";
